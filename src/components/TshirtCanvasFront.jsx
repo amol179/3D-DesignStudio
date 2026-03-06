@@ -1,3 +1,30 @@
+// import { CANVAS_CONFIG } from "@/constants/designConstants";
+// import { useTshirtCanvas } from "@/hooks/useTshirtCanvas";
+
+// const TshirtCanvasFront = ({ svgPath }) => {
+//   const { canvasRef, tshirtColor } = useTshirtCanvas({
+//     svgPath,
+//     view: "front",
+//   });
+
+//   return (
+//     <div className="relative w-full h-auto">
+//       <div className="absolute inset-0 pointer-events-none">
+//         <svg viewBox="0 0 810 810" className="w-full h-full">
+//           <path d={svgPath} fill={tshirtColor} stroke="#000" strokeWidth="1" />
+//         </svg>
+//       </div>
+//       <canvas
+//         ref={canvasRef}
+//         className="absolute inset-0 z-10"
+//         width={CANVAS_CONFIG.width}
+//         height={CANVAS_CONFIG.height}
+//       />
+//     </div>
+//   );
+// };
+
+// export default TshirtCanvasFront;
 import { CANVAS_CONFIG } from "@/constants/designConstants";
 import { useTshirtCanvas } from "@/hooks/useTshirtCanvas";
 
@@ -8,15 +35,30 @@ const TshirtCanvasFront = ({ svgPath }) => {
   });
 
   return (
-    <div className="relative w-full h-auto">
+    <div className="relative w-full aspect-square">
+
+      {/* T-Shirt SVG Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <svg viewBox="0 0 810 810" className="w-full h-full">
-          <path d={svgPath} fill={tshirtColor} stroke="#000" strokeWidth="1" />
+        <svg
+          viewBox="0 0 810 810"
+          className="w-full h-full"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {svgPath && (
+            <path
+              d={svgPath}
+              fill={tshirtColor}
+              stroke="#000"
+              strokeWidth="1"
+            />
+          )}
         </svg>
       </div>
+
+      {/* Fabric Canvas */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 z-10"
+        className="absolute inset-0 z-10 w-full h-full"
         width={CANVAS_CONFIG.width}
         height={CANVAS_CONFIG.height}
       />
