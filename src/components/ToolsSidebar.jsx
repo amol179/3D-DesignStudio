@@ -58,7 +58,7 @@ export function ToolsSidebar({ manualSync }) {
 
       {/* Desktop version - always visible */}
       <div className="hidden lg:block">
-        <div className="w-full min-w-[220px] max-w-[260px] rounded-3xl border bg-gradient-to-b from-white via-slate-50 to-white shadow-xl">
+        <div className="w-full min-w-[220px] max-w-[260px] panel-surface">
           <div className="p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>

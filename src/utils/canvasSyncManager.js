@@ -68,7 +68,7 @@ export const canvasSyncManager = {
           (error) => {
             console.error("Error enlivening objects:", error);
             resolve(null);
-          }
+          },
         );
       } catch (error) {
         console.error("Error retrieving canvas texture from storage:", error);

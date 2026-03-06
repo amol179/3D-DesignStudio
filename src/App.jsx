@@ -56,70 +56,66 @@ function DesignerApp({ onBack }) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12 relative z-10">
         <Header onBack={onBack} />
 
-        <div className="mt-6 sm:mt-8 grid lg:grid-cols-[minmax(200px,240px)_1fr] gap-4 sm:gap-6 items-start">
+        <div className="mt-6 sm:mt-8 grid lg:grid-cols-[minmax(220px,260px)_minmax(360px,1fr)_minmax(380px,1fr)] xl:grid-cols-[260px_minmax(420px,1fr)_minmax(420px,1fr)] gap-4 sm:gap-6 items-start min-h-[70vh] lg:min-h-[calc(100vh-160px)]">
           <ToolsSidebar manualSync={manualSync} />
 
-          <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-            <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4">
-              <div className="rounded-xl border bg-muted/40 p-3">
-                <div className="w-full relative overflow-hidden rounded-xl responsive-3d">
-                  <Canvas>
-                    <OrbitControls
-                      maxPolarAngle={Math.PI / 2}
-                      minPolarAngle={Math.PI / 3}
-                    />
-                    <Suspense fallback={null}>
-                      {selectedType === "cap" ? (
-                        <CapModel
-                          tshirtColor={tshirtColor}
-                          onViewChange={handleViewChange}
-                          designTexture={designTextureFront}
-                        />
-                      ) : (
-                        <TshirtModel
-                          tshirtColor={tshirtColor}
-                          onViewChange={handleViewChange}
-                          designTexture={designTextureFront}
-                          designTextureBack={designTextureBack}
-                        />
-                      )}
-                      <Environment preset="sunset" />
-                    </Suspense>
-                  </Canvas>
-                  <Loader
-                    containerStyles={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      background: "rgba(255, 255, 255, 0.6)",
-                      pointerEvents: "none",
-                    }}
-                    dataStyles={{
-                      color: "#0f172a",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                    }}
-                    barStyles={{
-                      backgroundColor: "#f59e0b",
-                      height: "2px",
-                    }}
+          <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4 h-full flex flex-col">
+            <div className="rounded-xl border bg-muted/40 p-3 flex-1 flex flex-col">
+              <div className="w-full relative overflow-hidden rounded-xl responsive-3d flex-1">
+                <Canvas>
+                  <OrbitControls
+                    maxPolarAngle={Math.PI / 2}
+                    minPolarAngle={Math.PI / 3}
                   />
-                </div>
-              </div>
-              <div className="mt-3 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <span>💡</span>
-                <p className="font-semibold">
-                  Click the 3D model to swap views.
-                </p>
+                  <Suspense fallback={null}>
+                    {selectedType === "cap" ? (
+                      <CapModel
+                        tshirtColor={tshirtColor}
+                        onViewChange={handleViewChange}
+                        designTexture={designTextureFront}
+                      />
+                    ) : (
+                      <TshirtModel
+                        tshirtColor={tshirtColor}
+                        onViewChange={handleViewChange}
+                        designTexture={designTextureFront}
+                        designTextureBack={designTextureBack}
+                      />
+                    )}
+                    <Environment preset="sunset" />
+                  </Suspense>
+                </Canvas>
+                <Loader
+                  containerStyles={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    background: "rgba(255, 255, 255, 0.6)",
+                    pointerEvents: "none",
+                  }}
+                  dataStyles={{
+                    color: "#0f172a",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
+                  barStyles={{
+                    backgroundColor: "#f59e0b",
+                    height: "2px",
+                  }}
+                />
               </div>
             </div>
+            <div className="mt-3 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <span>💡</span>
+              <p className="font-semibold">Click the 3D model to swap views.</p>
+            </div>
+          </div>
 
-            <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4">
-              <div className="rounded-xl border bg-muted/40 p-3 sm:p-4">
-                <DesignArea />
-              </div>
+          <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4 h-full flex flex-col">
+            <div className="rounded-xl border bg-muted/40 p-3 sm:p-4 h-full">
+              <DesignArea />
             </div>
           </div>
         </div>

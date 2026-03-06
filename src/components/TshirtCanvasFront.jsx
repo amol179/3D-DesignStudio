@@ -8,15 +8,17 @@ const TshirtCanvasFront = ({ svgPath }) => {
   });
 
   return (
-    <div className="relative w-full h-auto">
-      <div className="absolute inset-0 pointer-events-none">
-        <svg viewBox="0 0 810 810" className="w-full h-full">
-          <path d={svgPath} fill={tshirtColor} stroke="#000" strokeWidth="1" />
-        </svg>
-      </div>
+    <div className="tshirt-stage">
+      <svg
+        viewBox="0 0 810 810"
+        preserveAspectRatio="xMidYMid meet"
+        className="tshirt-layer"
+      >
+        <path d={svgPath} fill={tshirtColor} stroke="#000" strokeWidth="1" />
+      </svg>
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 z-10"
+        className="tshirt-layer tshirt-canvas z-10"
         width={CANVAS_CONFIG.width}
         height={CANVAS_CONFIG.height}
       />

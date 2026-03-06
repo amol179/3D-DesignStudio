@@ -43,8 +43,8 @@ const DesignArea = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 rounded-2xl border bg-gradient-to-br from-white/90 via-slate-50/90 to-white/70 p-3 sm:p-4 shadow-sm">
+    <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col gap-3 panel-surface p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-semibold">
@@ -84,30 +84,24 @@ const DesignArea = () => {
       </div>
 
       {/* Conditional Rendering: Only show the selected canvas */}
-      <Card className="overflow-hidden border-none shadow-xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-50">
-        <CardContent className="p-0">
-          <div className="relative isolate">
+      <Card className="h-full overflow-hidden border-none shadow-none bg-transparent">
+        <CardContent className="p-0 h-full">
+          <div className="relative isolate flex items-center justify-center min-h-[360px] sm:min-h-[440px]">
             <div className="absolute inset-0 opacity-60" aria-hidden>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,255,255,0.05),transparent_25%),radial-gradient(circle_at_80%_0%,rgba(125,211,252,0.1),transparent_28%),linear-gradient(120deg,rgba(15,23,42,0.65),rgba(15,23,42,0.95))]" />
               <div className="absolute inset-6 rounded-3xl border border-white/10" />
               <div className="absolute inset-6 rounded-3xl bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)]" />
             </div>
 
-            <div className="relative z-10 p-4 sm:p-6">
-              <div className="aspect-square w-full max-w-3xl mx-auto grid place-items-center">
-                <div className="relative w-full max-w-2xl">
-                  <div
-                    className="absolute inset-0 rounded-2xl bg-slate-950/60 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-                    aria-hidden
-                  />
-                  <div className="relative rounded-2xl overflow-hidden">
-                    {selectedView === "front" && (
-                      <TshirtCanvasFront svgPath={getSvgPath("front")} />
-                    )}
-                    {selectedView === "back" && (
-                      <TshirtCanvasBack svgPath={getSvgPath("back")} />
-                    )}
-                  </div>
+            <div className="relative z-10 w-full max-w-4xl px-4 sm:px-6">
+              <div className="canvas-shell relative w-full max-w-3xl mx-auto aspect-[9/10]">
+                <div className="relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center">
+                  {selectedView === "front" && (
+                    <TshirtCanvasFront svgPath={getSvgPath("front")} />
+                  )}
+                  {selectedView === "back" && (
+                    <TshirtCanvasBack svgPath={getSvgPath("back")} />
+                  )}
                 </div>
               </div>
             </div>

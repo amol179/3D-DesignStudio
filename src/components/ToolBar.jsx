@@ -166,7 +166,7 @@ const ToolBar = ({ manualSync }) => {
 
   return (
     <div className="flex flex-col gap-4 w-full min-w-[190px] md:min-w-[210px]">
-      <div className="rounded-xl border bg-white/70 shadow-sm p-3 space-y-3">
+      <div className="toolbar-card p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
@@ -222,7 +222,7 @@ const ToolBar = ({ manualSync }) => {
         </Popover>
       </div>
 
-      <div className="rounded-xl border bg-white/70 shadow-sm p-3 space-y-3">
+      <div className="toolbar-card p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
@@ -267,7 +267,7 @@ const ToolBar = ({ manualSync }) => {
         </Button>
       </div>
 
-      <div className="rounded-xl border bg-white/70 shadow-sm p-3 space-y-2">
+      <div className="toolbar-card p-3 space-y-2">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
@@ -276,11 +276,11 @@ const ToolBar = ({ manualSync }) => {
             <h4 className="font-semibold leading-tight">Housekeeping</h4>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={handleDelete}
             variant="destructive"
-            className="justify-start gap-2"
+            className="justify-start gap-2 flex-1 min-w-[140px]"
           >
             <Trash />
             <span>Remove</span>
@@ -288,7 +288,7 @@ const ToolBar = ({ manualSync }) => {
           <Button
             onClick={handleClearAll}
             variant="outline"
-            className="justify-start gap-2"
+            className="justify-start gap-2 flex-1 min-w-[140px]"
           >
             <Trash />
             <span>Clear all</span>
