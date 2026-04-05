@@ -1,38 +1,23 @@
 import { useSelector, useDispatch } from "react-redux";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TSHIRT_TYPES } from "../constants/designConstants";
+import { TSHIRT_TYPES, TSHIRT_COLOR_CODES } from "../constants/designConstants";
 import TshirtCanvasFront from "./TshirtCanvasFront";
 import TshirtCanvasBack from "./TshirtCanvasBack";
-import { setSelectedView } from "../features/tshirtSlice";
+import { setSelectedView, setTshirtColor } from "../features/tshirtSlice";
 import { useCanvas } from "@/hooks/useCanvas";
 
-const viewMeta = {
-  front: {
-    label: "Front",
-    hint: "Best for logos, hero art, and bold messaging.",
-  },
-  back: {
-    label: "Back",
-    hint: "Great for sponsor grids, statements, and numbers.",
-  },
-};
-
 const DesignArea = () => {
-  // Get values from Redux store
   const dispatch = useDispatch();
-  const selectedType = useSelector((state) => state.tshirt.selectedType);
   const selectedView = useSelector((state) => state.tshirt.selectedView);
+  const tshirtColor = useSelector((state) => state.tshirt.tshirtColor);
   const { activeCanvas, setSelectedObject } = useCanvas();
 
+  const tshirtType = TSHIRT_TYPES["crew-neck"];
   const getSvgPath = (view) => {
-    const tshirtType = TSHIRT_TYPES[selectedType];
     return view === "front" ? tshirtType.frontPath : tshirtType.backPath;
   };
 
   const handleViewChange = (view) => {
     if (view !== selectedView) {
-      // Clear selected object before switching views
       if (activeCanvas) {
         activeCanvas.discardActiveObject();
         activeCanvas.renderAll();
@@ -43,71 +28,68 @@ const DesignArea = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex flex-col gap-3 panel-surface p-3 sm:p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-semibold">
-              Canvas
-            </p>
-            <h3 className="text-lg font-semibold leading-tight">
-              Design Surface
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Switch views, refine placement, and preview the exact print zone.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {Object.entries(viewMeta).map(([key, meta]) => (
-              <Button
-                key={key}
-                onClick={() => handleViewChange(key)}
-                variant={selectedView === key ? "default" : "ghost"}
-                className={`rounded-full border ${selectedView === key ? "shadow-md" : "border-dashed"}`}
-              >
-                {meta.label}
-              </Button>
+    <div className="flex flex-col gap-3 h-full">
+      {/* Compact header bar: color picker + view toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Left: color swatches */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            {TSHIRT_COLOR_CODES.map((c) => (
+              <button
+                key={c}
+                onClick={() => dispatch(setTshirtColor(c))}
+                className={`w-5 h-5 rounded-full border-2 transition-all duration-150 hover:scale-125 ${
+                  tshirtColor === c
+                    ? "border-violet-400 ring-2 ring-violet-400/30 scale-110"
+                    : "border-white/20"
+                }`}
+                style={{ backgroundColor: c }}
+              />
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-          <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 text-amber-900 px-3 py-1 border border-amber-100">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
-            {viewMeta[selectedView].hint}
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-900 px-3 py-1 border border-slate-200">
-            {TSHIRT_TYPES[selectedType].name}
-          </span>
+        {/* Right: view toggle */}
+        <div className="flex items-center gap-1 bg-white/5 rounded-xl px-1 py-1 border border-white/10">
+          {["front", "back"].map((v) => (
+            <button
+              key={v}
+              onClick={() => handleViewChange(v)}
+              className={`text-xs font-medium px-4 py-1.5 rounded-lg transition-all duration-200 ${
+                selectedView === v
+                  ? "bg-white/15 text-white shadow-sm"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
+            >
+              {v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Conditional Rendering: Only show the selected canvas */}
-      <Card className="h-full overflow-hidden border-none shadow-none bg-transparent">
-        <CardContent className="p-0 h-full">
-          <div className="relative isolate flex items-center justify-center min-h-[360px] sm:min-h-[440px]">
-            <div className="absolute inset-0 opacity-60" aria-hidden>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,255,255,0.05),transparent_25%),radial-gradient(circle_at_80%_0%,rgba(125,211,252,0.1),transparent_28%),linear-gradient(120deg,rgba(15,23,42,0.65),rgba(15,23,42,0.95))]" />
-              <div className="absolute inset-6 rounded-3xl border border-white/10" />
-              <div className="absolute inset-6 rounded-3xl bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)]" />
-            </div>
+      {/* Canvas area */}
+      <div className="flex-1 relative flex items-center justify-center min-h-[340px] rounded-xl overflow-hidden bg-slate-950/40 border border-white/5">
+        {/* Subtle grid background */}
+        <div className="absolute inset-0 opacity-20" aria-hidden>
+          <div className="absolute inset-0" style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }} />
+        </div>
 
-            <div className="relative z-10 w-full max-w-4xl px-4 sm:px-6">
-              <div className="canvas-shell relative w-full max-w-3xl mx-auto aspect-[9/10]">
-                <div className="relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center">
-                  {selectedView === "front" && (
-                    <TshirtCanvasFront svgPath={getSvgPath("front")} />
-                  )}
-                  {selectedView === "back" && (
-                    <TshirtCanvasBack svgPath={getSvgPath("back")} />
-                  )}
-                </div>
-              </div>
+        <div className="relative z-10 w-full max-w-3xl px-2">
+          <div className="canvas-shell relative w-full mx-auto max-w-2xl aspect-[9/10]">
+            <div className="relative rounded-2xl overflow-hidden flex items-center justify-center bg-transparent">
+              {selectedView === "front" && (
+                <TshirtCanvasFront svgPath={getSvgPath("front")} variant="tshirt" />
+              )}
+              {selectedView === "back" && (
+                <TshirtCanvasBack svgPath={getSvgPath("back")} variant="tshirt" />
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

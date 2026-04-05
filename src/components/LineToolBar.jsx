@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
@@ -15,7 +16,6 @@ const LineToolBar = ({ manualSync }) => {
     }
   }, [selectedObject]);
 
-  // Only show for text objects
   if (!selectedObject || selectedObject.type !== "line") {
     return null;
   }
@@ -32,7 +32,7 @@ const LineToolBar = ({ manualSync }) => {
   const handleStrokeWidthChange = (e) => {
     if (!selectedObject || !activeCanvas) return;
     const newSize = parseInt(e.target.value, 10);
-    if (isNaN(newSize) || newSize < 1) return; // Prevent invalid input
+    if (isNaN(newSize) || newSize < 1) return;
     setStrokeWidth(newSize);
     selectedObject.set("strokeWidth", newSize);
     activeCanvas.renderAll();
@@ -60,6 +60,10 @@ const LineToolBar = ({ manualSync }) => {
       />
     </div>
   );
+};
+
+LineToolBar.propTypes = {
+  manualSync: PropTypes.func.isRequired,
 };
 
 export default LineToolBar;

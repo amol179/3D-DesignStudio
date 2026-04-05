@@ -1,303 +1,320 @@
-import { useDispatch, useSelector } from "react-redux";
-import * as fabric from "fabric";
+import PropTypes from "prop-types";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ImagePlus, Palette, Slash, Trash, Type, Wand2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  CANVAS_CONFIG,
-  DEFAULT_TEXT_CONFIG,
-  TSHIRT_TYPES,
-  TSHIRT_COLOR_CODES,
-} from "../constants/designConstants";
-
-import {
-  setSelectedType,
-  setTshirtColor,
-  setSelectedView,
-} from "../features/tshirtSlice";
-import { useRef } from "react";
-import SaveDesign from "./SaveDesign";
 import { useCanvas } from "@/hooks/useCanvas";
-import { FrontT } from "./FrontT";
-import { Canvas } from "@react-three/fiber";
-import { Environment, OrbitControls } from "@react-three/drei";
-import canvasStorageManager from "@/utils/canvasStorageManager";
+import { useToast } from "@/hooks/use-toast";
+import { useSelector } from "react-redux";
+import { useCanvasTextureSync } from "@/hooks/useCanvasTextureSync";
+import SaveDesign from "@/components/SaveDesign";
+import AIDesignGenerator from "@/components/AIDesignGenerator";
+import { Trash, ZoomIn, ZoomOut, ImagePlus, Type, Slash } from "lucide-react";
+import * as fabric from "fabric";
 
 const ToolBar = ({ manualSync }) => {
-  const dispatch = useDispatch();
-  const fileInputRef = useRef(null); // use for handle image input
-  const selectedType = useSelector((state) => state.tshirt.selectedType);
   const { activeCanvas, selectedObject } = useCanvas();
+  const [brushColor, setBrushColor] = useState("#000000");
+  const [brushSize, setBrushSize] = useState(5);
+  const [drawingMode, setDrawingMode] = useState(false);
+  const { view } = useSelector((state) => state.tshirt);
+  const { toast } = useToast();
 
-  const handleTypeChange = (value) => {
-    console.log("Selected Tshirt " + value);
-    dispatch(setSelectedType(value));
-    dispatch(setSelectedView("front"));
-  };
+  useCanvasTextureSync({ view });
 
-  const handleColorChange = (color) => {
-    dispatch(setTshirtColor(color));
-  };
-
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  useEffect(() => {
+    if (selectedObject && selectedObject.type === "line") {
+      setBrushColor(selectedObject.stroke || "#000000");
+      setBrushSize(selectedObject.strokeWidth || 5);
     }
+  }, [selectedObject]);
+
+  const handleColorChange = (colorValue) => {
+    setBrushColor(colorValue);
+
+    if (activeCanvas) {
+      activeCanvas.freeDrawingBrush = activeCanvas.freeDrawingBrush || new fabric.PencilBrush(activeCanvas);
+      activeCanvas.freeDrawingBrush.color = colorValue;
+      if (!activeCanvas.isDrawingMode && selectedObject) {
+        selectedObject.set("stroke", colorValue);
+        selectedObject.set("fill", colorValue);
+      }
+      activeCanvas.renderAll();
+    }
+
+    if (selectedObject) {
+      selectedObject.set("stroke", colorValue);
+      selectedObject.set("fill", colorValue);
+    }
+    manualSync();
   };
 
-  const handleAddImage = (e) => {
-    if (!activeCanvas || !e.target.files || !e.target.files[0]) return;
+  const handleBrushSizeChange = (e) => {
+    const size = Number(e.target.value);
+    if (size <= 0) return;
+    setBrushSize(size);
 
-    const file = e.target.files[0];
-    const reader = new FileReader();
+    if (activeCanvas) {
+      activeCanvas.freeDrawingBrush = activeCanvas.freeDrawingBrush || new fabric.PencilBrush(activeCanvas);
+      activeCanvas.freeDrawingBrush.width = size;
+      activeCanvas.renderAll();
+    }
 
-    reader.onload = (event) => {
-      const imgObj = new Image();
-      imgObj.src = event.target.result;
+    if (selectedObject) {
+      selectedObject.set("strokeWidth", size);
+      selectedObject.set("fontSize", selectedObject.fontSize ? selectedObject.fontSize : size);
+      activeCanvas?.renderAll();
+    }
+    manualSync();
+  };
 
-      imgObj.onload = () => {
-        const image = new fabric.Image(imgObj);
+  const handleDelete = () => {
+    if (!selectedObject || !activeCanvas) return;
+    activeCanvas.remove(selectedObject);
+    activeCanvas.discardActiveObject();
+    activeCanvas.requestRenderAll();
+    manualSync();
+    toast({ title: "Shape removed", description: "Selected object deleted." });
+  };
 
-        // Calculate scaling to fit within canvas
-        const maxWidth = CANVAS_CONFIG.width * 0.5;
-        const maxHeight = CANVAS_CONFIG.height * 0.5;
+  const handleDuplicate = () => {
+    if (!selectedObject || !activeCanvas) return;
+    selectedObject.clone((cloned) => {
+      cloned.set({ left: selectedObject.left + 10, top: selectedObject.top + 10 });
+      activeCanvas.add(cloned);
+      activeCanvas.setActiveObject(cloned);
+      activeCanvas.requestRenderAll();
+      manualSync();
+      toast({ title: "Duplicated", description: "Object duplicated." });
+    });
+  };
 
-        if (image.width > maxWidth || image.height > maxHeight) {
-          const scale = Math.min(
-            maxWidth / image.width,
-            maxHeight / image.height,
-          );
-          image.scale(scale);
-        }
+  const handleCenter = () => {
+    if (!selectedObject || !activeCanvas) return;
+    selectedObject.center();
+    selectedObject.setCoords();
+    activeCanvas.requestRenderAll();
+    manualSync();
+    toast({ title: "Centered", description: "Object centered on canvas." });
+  };
 
-        // Center the image
-        image.set({
-          left: (activeCanvas.width - image.getScaledWidth()) / 2,
-          top: (activeCanvas.height - image.getScaledHeight()) / 2,
-        });
+  const handleClearAll = () => {
+    if (!activeCanvas) return;
+    activeCanvas.clear();
+    manualSync();
+    toast({ title: "Reset", description: "Canvas cleared successfully." });
+  };
 
-        activeCanvas.add(image);
-        activeCanvas.setActiveObject(image);
-        activeCanvas.renderAll();
-      };
-    };
+  const handleZoomIn = () => {
+    if (!activeCanvas) return;
+    activeCanvas.setZoom((activeCanvas.getZoom() || 1) * 1.1);
+  };
 
-    reader.readAsDataURL(file);
-    // Reset input value to allow uploading the same image again
-    e.target.value = "";
+  const toggleDrawingMode = () => {
+    if (!activeCanvas) return;
+    const isOn = !drawingMode;
+    setDrawingMode(isOn);
+    activeCanvas.isDrawingMode = isOn;
+    activeCanvas.freeDrawingBrush = activeCanvas.freeDrawingBrush || new fabric.PencilBrush(activeCanvas);
+    activeCanvas.freeDrawingBrush.width = brushSize;
+    activeCanvas.freeDrawingBrush.color = brushColor;
+    toast({
+      title: `Drawing mode ${isOn ? "enabled" : "disabled"}`,
+      description: `You can now ${isOn ? "draw" : "select"} on canvas.`,
+    });
+  };
+
+  const handleZoomOut = () => {
+    if (!activeCanvas) return;
+    activeCanvas.setZoom((activeCanvas.getZoom() || 1) / 1.1);
   };
 
   const handleAddText = () => {
     if (!activeCanvas) return;
-
-    const text = new fabric.Textbox("Add Your Text Here...", {
-      ...DEFAULT_TEXT_CONFIG,
-      left: activeCanvas.width / 2,
-      top: activeCanvas.height / 2,
+    const text = new fabric.Textbox("Your Text", {
+      left: 100,
+      top: 100,
       width: 200,
-      editable: false,
+      fontSize: 20,
+      fill: "#000000",
     });
-
     activeCanvas.add(text);
     activeCanvas.setActiveObject(text);
-    activeCanvas.renderAll();
+    activeCanvas.requestRenderAll();
+    manualSync();
+    toast({ title: "Text added", description: "Text block added to canvas." });
   };
 
   const handleAddLine = () => {
     if (!activeCanvas) return;
-
-    const line = new fabric.Line([100, 200, 250, 200], {
-      stroke: "black",
-      strokeWidth: 3,
-      selectable: true,
-      hasControls: true,
-      strokeLineCap: "round",
+    const line = new fabric.Line([50, 100, 200, 100], {
+      stroke: "#000000",
+      strokeWidth: 2,
     });
-
     activeCanvas.add(line);
     activeCanvas.setActiveObject(line);
-    activeCanvas.renderAll();
+    activeCanvas.requestRenderAll();
+    manualSync();
+    toast({ title: "Line added", description: "Guideline added to canvas." });
   };
 
-  const handleDelete = () => {
-    if (!activeCanvas || !selectedObject) return;
-
-    activeCanvas.remove(selectedObject);
-    activeCanvas.discardActiveObject();
-    activeCanvas.renderAll();
-    manualSync();
+  const triggerFileInput = () => {
+    const fileInput = document.getElementById("file-input");
+    if (fileInput) fileInput.click();
   };
 
-  // Add a clear all function if needed
-  const handleClearAll = () => {
-    if (!activeCanvas) return;
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeCanvas) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imgElement = new Image();
+      imgElement.src = event.target.result;
+      imgElement.onload = () => {
+        // Calculate appropriate scale to fit within safe zone
+        const safeZoneWidth = 410;
+        const safeZoneHeight = 400;
+        let scaleFactor = Math.min(safeZoneWidth / imgElement.width, safeZoneHeight / imgElement.height, 1);
 
-    // Clear all objects from canvas
-    activeCanvas.clear();
-
-    // Clear storage for current view
-    canvasStorageManager.clearCanvasStorage("all");
-
-    // Re-initialize canvas with basic settings if needed
-    activeCanvas.renderAll();
-    manualSync();
+        const fabricImg = new fabric.Image(imgElement, {
+          left: 225,
+          top: 250,
+          scaleX: scaleFactor,
+          scaleY: scaleFactor,
+          selectable: true,
+          hasControls: true,
+          hasBorders: true,
+          cornerStyle: "circle",
+          transparentCorners: false,
+          lockUniScaling: true, // Lock aspect ratio to prevent distortion
+          lockRotation: false,
+          objectCaching: true,
+          minScaleLimit: 0.3, // Minimum scale
+          maxScaleLimit: 2, // Maximum scale
+        });
+        fabricImg.setControlsVisibility({
+          mt: true,
+          mb: true,
+          ml: true,
+          mr: true,
+          bl: true,
+          br: true,
+          tl: true,
+          tr: true,
+          mtr: true,
+        });
+        activeCanvas.add(fabricImg);
+        activeCanvas.setActiveObject(fabricImg);
+        activeCanvas.requestRenderAll();
+        manualSync();
+        toast({ title: "Image uploaded", description: "Artwork added to canvas." });
+      };
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full min-w-[190px] md:min-w-[210px]">
+    <div className="toolbar-container p-3 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 max-h-[calc(100vh-200px)] overflow-y-auto" style={{ minHeight: '220px' }}>
+      <input
+        id="file-input"
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       <div className="toolbar-card p-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
-              Setup
-            </p>
-            <h4 className="font-semibold leading-tight">Base garment</h4>
-          </div>
-          <Wand2 className="h-5 w-5 text-amber-500" />
+        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Add Elements</p>
+        <h4 className="font-semibold leading-tight">Insert content</h4>
+        <div className="grid grid-cols-1 gap-2">
+          <Button
+            onClick={toggleDrawingMode}
+            className="w-full flex items-center justify-center gap-2 whitespace-nowrap"
+            variant={drawingMode ? "primary" : "outline"}
+          >
+            <span>{drawingMode ? "Disable" : "Enable"} Draw</span>
+          </Button>
+          <Button
+            onClick={triggerFileInput}
+            className="w-full flex items-center justify-center gap-2 whitespace-nowrap"
+            variant="default"
+          >
+            <ImagePlus className="h-4 w-4" />
+            <span>Upload artwork</span>
+          </Button>
+
+          <AIDesignGenerator activeCanvas={activeCanvas} manualSync={manualSync} />
+
+          <Button
+            onClick={handleAddText}
+            className="w-full flex items-center justify-center gap-2 whitespace-nowrap"
+            variant="secondary"
+          >
+            <Type className="h-4 w-4" />
+            <span>Add text block</span>
+          </Button>
+
+          <Button
+            onClick={handleAddLine}
+            className="w-full flex items-center justify-center gap-2 whitespace-nowrap"
+            variant="outline"
+          >
+            <Slash className="h-4 w-4" />
+            <span>Guideline</span>
+          </Button>
         </div>
-
-        <Select value={selectedType} onValueChange={handleTypeChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select T-Shirt" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {Object.entries(TSHIRT_TYPES).map(([value, { name }]) => (
-                <SelectItem key={value} value={value}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button className="w-full justify-start gap-2" variant="secondary">
-              <Palette />
-              <span>Base color</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="ml-2 w-80">
-            <div className="grid gap-4">
-              <div className="space-y-1">
-                <h4 className="font-semibold leading-tight">Palette</h4>
-                <p className="text-sm text-muted-foreground">
-                  Pick a print-ready cotton swatch.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {TSHIRT_COLOR_CODES.map((color) => (
-                  <Button
-                    key={color}
-                    className="w-9 h-9 rounded-full p-0 border-2 border-white shadow-md hover:scale-105 transition"
-                    style={{ backgroundColor: color }}
-                    onClick={() => handleColorChange(color)}
-                  />
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
 
       <div className="toolbar-card p-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
-              Add
-            </p>
-            <h4 className="font-semibold leading-tight">Artwork & text</h4>
-          </div>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Quick Actions</p>
+        <h4 className="font-semibold leading-tight">Editor controls</h4>
+        <div className="grid grid-cols-1 gap-2">
+          <Button onClick={handleZoomIn} className="w-full flex items-center justify-center gap-2 whitespace-nowrap" variant="outline"><ZoomIn className="h-4 w-4" /> Zoom In</Button>
+          <Button onClick={handleZoomOut} className="w-full flex items-center justify-center gap-2 whitespace-nowrap" variant="outline"><ZoomOut className="h-4 w-4" /> Zoom Out</Button>
+          <Button onClick={handleClearAll} className="w-full flex items-center justify-center gap-2 whitespace-nowrap" variant="outline"><Trash className="h-4 w-4" /> Clear Canvas</Button>
         </div>
-
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          onChange={handleAddImage}
-          className="hidden"
-        />
-        <Button
-          onClick={triggerFileInput}
-          className="w-full justify-start gap-2"
-          variant="default"
-        >
-          <ImagePlus />
-          <span>Upload artwork</span>
-        </Button>
-
-        <Button
-          onClick={handleAddText}
-          className="w-full justify-start gap-2"
-          variant="secondary"
-        >
-          <Type />
-          <span>Add text block</span>
-        </Button>
-
-        <Button
-          onClick={handleAddLine}
-          className="w-full justify-start gap-2"
-          variant="outline"
-        >
-          <Slash />
-          <span>Guideline</span>
-        </Button>
       </div>
 
       <div className="toolbar-card p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
-              Cleanup
-            </p>
-            <h4 className="font-semibold leading-tight">Housekeeping</h4>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Brush Tools</p>
+        <h4 className="font-semibold leading-tight">Paint style</h4>
+        <div className="flex flex-col gap-2">
+            <label className="text-sm">Brush Color</label>
+            <input
+              type="color"
+              value={brushColor}
+              onChange={(e) => handleColorChange(e.target.value)}
+              className="w-20 h-10 p-0 border rounded"
+            />
+            <label className="text-sm">Brush Size</label>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={brushSize}
+              onChange={handleBrushSizeChange}
+            />
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={handleDelete}
-            variant="destructive"
-            className="justify-start gap-2 flex-1 min-w-[140px]"
-          >
-            <Trash />
-            <span>Remove</span>
-          </Button>
-          <Button
-            onClick={handleClearAll}
-            variant="outline"
-            className="justify-start gap-2 flex-1 min-w-[140px]"
-          >
-            <Trash />
-            <span>Clear all</span>
-          </Button>
+      </div>
+
+      <div className="toolbar-card p-3 space-y-2">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Object Actions</p>
+        <h4 className="font-semibold leading-tight">Modify selected object</h4>
+        <div className="grid grid-cols-1 gap-2">
+          <Button onClick={handleDelete} variant="destructive" className="w-full flex items-center justify-center gap-2 whitespace-nowrap"><Trash className="h-4 w-4" /> Remove</Button>
+          <Button onClick={handleDuplicate} variant="secondary" className="w-full flex items-center justify-center gap-2 whitespace-nowrap">Duplicate</Button>
+          <Button onClick={handleCenter} variant="outline" className="w-full flex items-center justify-center gap-2 whitespace-nowrap">Center</Button>
+          <Button onClick={handleClearAll} variant="outline" className="w-full flex items-center justify-center gap-2 whitespace-nowrap"><Trash className="h-4 w-4" /> Clear all</Button>
         </div>
       </div>
-      {/* <SaveDesign /> */}
+
+      <div className="toolbar-card p-3">
+        <SaveDesign />
+      </div>
     </div>
   );
+};
+
+ToolBar.propTypes = {
+  manualSync: PropTypes.func.isRequired,
 };
 
 export default ToolBar;

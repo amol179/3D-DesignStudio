@@ -1,144 +1,54 @@
-import { useDispatch, useSelector } from "react-redux";
-import DesignArea from "./components/DesignArea";
-import Header from "./components/Header";
-import { Toaster } from "@/components/ui/toaster";
-import { Canvas } from "@react-three/fiber";
-import { Environment, Loader, OrbitControls } from "@react-three/drei";
-import { setSelectedView } from "./features/tshirtSlice";
-import { useCanvas } from "./hooks/useCanvas";
-import { TshirtModel } from "./components/TShirtModel";
-import { CapModel } from "./components/CapModel";
-import { useCanvasTextureSync } from "./hooks/useCanvasTextureSync";
-import { Suspense, useState, useEffect } from "react";
-import { ToolsSidebar } from "./components/ToolsSidebar";
+import { useState, useEffect } from "react";
 import LandingPage from "./components/LandingPage";
 import AuthPage from "./components/AuthPage";
+import DesignerPage from "./pages/DesignerPage";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-
-function DesignerApp({ onBack }) {
-  const tshirtColor = useSelector((state) => state.tshirt.tshirtColor);
-  const selectedType = useSelector((state) => state.tshirt.selectedType);
-  const selectedView = useSelector((state) => state.tshirt.selectedView);
-  const dispatch = useDispatch();
-  const { frontCanvas, backCanvas } = useCanvas();
-
-  const { designTextureFront, designTextureBack, manualTriggerSync } =
-    useCanvasTextureSync({
-      frontCanvas,
-      backCanvas,
-      selectedView,
-    });
-
-  // Function to Manually trigger a texture sync
-  const manualSync = () => {
-    manualTriggerSync(selectedView);
-  };
-
-  // Function to update the selected view
-  const handleViewChange = (view) => {
-    if (view !== selectedView) {
-      dispatch(setSelectedView(view));
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fdf4e5] via-[#eef4ff] to-white text-foreground dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden">
-      <div
-        className="absolute -top-10 -left-10 h-48 w-48 rounded-full bg-amber-200/60 blur-3xl dark:bg-amber-500/20"
-        aria-hidden
-      />
-      <div
-        className="absolute -bottom-16 -right-20 h-60 w-60 rounded-full bg-sky-200/60 blur-3xl dark:bg-sky-500/20"
-        aria-hidden
-      />
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12 relative z-10">
-        <Header onBack={onBack} />
-
-        <div className="mt-6 sm:mt-8 grid lg:grid-cols-[minmax(220px,260px)_minmax(360px,1fr)_minmax(380px,1fr)] xl:grid-cols-[260px_minmax(420px,1fr)_minmax(420px,1fr)] gap-4 sm:gap-6 items-start min-h-[70vh] lg:min-h-[calc(100vh-160px)]">
-          <ToolsSidebar manualSync={manualSync} />
-
-          <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4 h-full flex flex-col">
-            <div className="rounded-xl border bg-muted/40 p-3 flex-1 flex flex-col">
-              <div className="w-full relative overflow-hidden rounded-xl responsive-3d flex-1">
-                <Canvas>
-                  <OrbitControls
-                    maxPolarAngle={Math.PI / 2}
-                    minPolarAngle={Math.PI / 3}
-                  />
-                  <Suspense fallback={null}>
-                    {selectedType === "cap" ? (
-                      <CapModel
-                        tshirtColor={tshirtColor}
-                        onViewChange={handleViewChange}
-                        designTexture={designTextureFront}
-                      />
-                    ) : (
-                      <TshirtModel
-                        tshirtColor={tshirtColor}
-                        onViewChange={handleViewChange}
-                        designTexture={designTextureFront}
-                        designTextureBack={designTextureBack}
-                      />
-                    )}
-                    <Environment preset="sunset" />
-                  </Suspense>
-                </Canvas>
-                <Loader
-                  containerStyles={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    background: "rgba(255, 255, 255, 0.6)",
-                    pointerEvents: "none",
-                  }}
-                  dataStyles={{
-                    color: "#0f172a",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                  }}
-                  barStyles={{
-                    backgroundColor: "#f59e0b",
-                    height: "2px",
-                  }}
-                />
-              </div>
-            </div>
-            <div className="mt-3 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-              <span>💡</span>
-              <p className="font-semibold">Click the 3D model to swap views.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-card/80 shadow-xl backdrop-blur-sm p-3 sm:p-4 h-full flex flex-col">
-            <div className="rounded-xl border bg-muted/40 p-3 sm:p-4 h-full">
-              <DesignArea />
-            </div>
-          </div>
-        </div>
-      </div>
-      <Toaster />
-    </div>
-  );
-}
+import { useSelector, useDispatch } from "react-redux";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+import { clearCart } from "./features/cartSlice";
 
 function App() {
   const [view, setView] = useState("landing");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState("light");
+  const [orderDetails, setOrderDetails] = useState(null);
+  const cartCount = useSelector((state) =>
+    state.cart.items.reduce((total, item) => total + (item.quantity || 0), 0),
+  );
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const initialTheme =
+      localStorage.getItem("theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
+    setTheme(initialTheme);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     // Listen to Firebase authentication state
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // User is logged in, set view to designer
-        setView("designer");
+        // User is logged in, show the landing dashboard page first
+        setView("landing");
       } else {
-        // User is logged out, set view to landing
+        // User is logged out
         setView("landing");
       }
       setLoading(false);
@@ -147,8 +57,37 @@ function App() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!loading && !user && view === "designer") {
+      setView("login");
+    }
+    if (!loading && user && (view === "login" || view === "signup")) {
+      setView("landing");
+    }
+  }, [loading, user, view]);
+
+  const handleGoLanding = () => {
+    setView("landing");
+  };
+
+  const handleContinueToDashboard = () => {
+    const currentAuthUser = auth.currentUser;
+    setUser(currentAuthUser);
+    setView("landing");
+  };
+
+  const handleOpenDesigner = () => setView("designer");
+  const handleOpenCart = () => setView("cart");
+  const handleOpenCheckout = () => setView("checkout");
+  const handleOrderPlaced = (details) => {
+    setOrderDetails(details);
+    dispatch(clearCart());
+    setView("success");
+  };
+
   const handleLogout = () => {
     signOut(auth).then(() => {
+      setUser(null);
       setView("landing");
     });
   };
@@ -168,9 +107,47 @@ function App() {
   if (view === "landing") {
     return (
       <LandingPage
-        onStart={() => setView("designer")}
+        isAuthenticated={!!user}
+        onStart={() => {
+          if (user) {
+            setView("designer");
+          } else {
+            setView("login");
+          }
+        }}
         onLogin={() => setView("login")}
         onSignup={() => setView("signup")}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (view === "cart") {
+    return (
+      <CartPage
+        onBack={handleOpenDesigner}
+        onCheckout={handleOpenCheckout}
+        cartCount={cartCount}
+      />
+    );
+  }
+
+  if (view === "checkout") {
+    return (
+      <CheckoutPage
+        onBack={handleOpenCart}
+        onOrderPlaced={handleOrderPlaced}
+        cartCount={cartCount}
+      />
+    );
+  }
+
+  if (view === "success") {
+    return (
+      <OrderSuccessPage
+        orderDetails={orderDetails}
+        onContinue={handleOpenDesigner}
+        cartCount={cartCount}
       />
     );
   }
@@ -179,8 +156,8 @@ function App() {
     return (
       <AuthPage
         initialMode="login"
-        onBack={() => setView("landing")}
-        onContinue={() => setView("designer")}
+        onBack={handleGoLanding}
+        onContinue={handleContinueToDashboard}
       />
     );
   }
@@ -189,13 +166,20 @@ function App() {
     return (
       <AuthPage
         initialMode="signup"
-        onBack={() => setView("landing")}
-        onContinue={() => setView("designer")}
+        onBack={handleGoLanding}
+        onContinue={handleContinueToDashboard}
       />
     );
   }
 
-  return <DesignerApp onBack={handleLogout} />;
+  return (
+    <DesignerPage
+      onLanding={handleGoLanding}
+      onCart={handleOpenCart}
+      cartCount={cartCount}
+      onLogout={handleLogout}
+    />
+  );
 }
 
 export default App;

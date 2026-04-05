@@ -1,5 +1,5 @@
 import { canvasSyncManager } from "@/utils/canvasSyncManager";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const useCanvasTextureSync = (options = {}) => {
   const { frontCanvas, backCanvas, selectedView = "front" } = options;
@@ -7,110 +7,89 @@ export const useCanvasTextureSync = (options = {}) => {
   const [designTextureFront, setDesignTextureFront] = useState(null);
   const [designTextureBack, setDesignTextureBack] = useState(null);
 
+  // Persistent cache for snapshots (survives re-renders and view switches)
+  const snapshotCache = useRef({ front: null, back: null });
+
+  // Capture a snapshot from a live canvas
+  const captureSnapshot = useCallback((canvas, view) => {
+    if (!canvas) return null;
+    try {
+      if (canvas.getObjects().length === 0) return snapshotCache.current[view];
+      const dataURL = canvasSyncManager.getCanvasTexture(canvas);
+      if (dataURL) {
+        snapshotCache.current[view] = dataURL;
+      }
+      return dataURL;
+    } catch {
+      return snapshotCache.current[view];
+    }
+  }, []);
+
+  // Front canvas: capture live + snapshot on unmount
   useEffect(() => {
-    const canvasMap = {
-      front: { canvas: frontCanvas, setter: setDesignTextureFront },
-      back: { canvas: backCanvas, setter: setDesignTextureBack },
-    };
-
-    const criticalEvents = [
-      "object:modified",
-      "object:added",
-      "object:removed",
-    ];
-
-    const updateTexture = async (view) => {
-      const { canvas, setter } = canvasMap[view];
-      if (!canvas) return;
-
-      try {
-        const hasActiveObjects = canvas.getObjects().length > 0;
-        if (!hasActiveObjects) return;
-
-        const texture = await (selectedView === view
-          ? canvasSyncManager.getCanvasTexture(canvas)
-          : await canvasSyncManager.getCanvasTextureFromStorage(view));
-
-        setter((prevTexture) =>
-          prevTexture !== texture ? texture : prevTexture
-        );
-      } catch (error) {
-        console.error(`${view} canvas texture update failed:`, error);
+    if (!frontCanvas) {
+      // Canvas just unmounted — use cached snapshot
+      if (snapshotCache.current.front) {
+        setDesignTextureFront(snapshotCache.current.front);
       }
-    };
-
-    const debouncedUpdateFront = canvasSyncManager.debounce(
-      () => updateTexture("front"),
-      100
-    );
-    const debouncedUpdateBack = canvasSyncManager.debounce(
-      () => updateTexture("back"),
-      100
-    );
-
-    // Setup events for front canvas
-    if (frontCanvas) {
-      criticalEvents.forEach((event) => {
-        frontCanvas.on(event, debouncedUpdateFront);
-      });
+      return;
     }
 
-    // Setup events for back canvas
-    if (backCanvas) {
-      criticalEvents.forEach((event) => {
-        backCanvas.on(event, debouncedUpdateBack);
-      });
-    }
+    // Canvas is mounted — capture initial state
+    const snap = captureSnapshot(frontCanvas, "front");
+    if (snap) setDesignTextureFront(snap);
 
-    // Initial updates
-    updateTexture("front");
-    updateTexture("back");
+    // Listen for changes
+    const onUpdate = canvasSyncManager.debounce(() => {
+      const s = captureSnapshot(frontCanvas, "front");
+      if (s) setDesignTextureFront(s);
+    }, 100);
 
-    // Cleanup
+    const events = ["object:modified", "object:added", "object:removed", "path:created"];
+    events.forEach((e) => frontCanvas.on(e, onUpdate));
+
+    // Cleanup: snapshot before unmounting
     return () => {
-      if (frontCanvas) {
-        criticalEvents.forEach((event) => {
-          frontCanvas.off(event, debouncedUpdateFront);
-        });
-      }
-      if (backCanvas) {
-        criticalEvents.forEach((event) => {
-          backCanvas.off(event, debouncedUpdateBack);
-        });
-      }
+      captureSnapshot(frontCanvas, "front");
+      events.forEach((e) => frontCanvas.off(e, onUpdate));
     };
-  }, [frontCanvas, backCanvas, selectedView]);
+  }, [frontCanvas, captureSnapshot]);
+
+  // Back canvas: same logic
+  useEffect(() => {
+    if (!backCanvas) {
+      if (snapshotCache.current.back) {
+        setDesignTextureBack(snapshotCache.current.back);
+      }
+      return;
+    }
+
+    const snap = captureSnapshot(backCanvas, "back");
+    if (snap) setDesignTextureBack(snap);
+
+    const onUpdate = canvasSyncManager.debounce(() => {
+      const s = captureSnapshot(backCanvas, "back");
+      if (s) setDesignTextureBack(s);
+    }, 100);
+
+    const events = ["object:modified", "object:added", "object:removed", "path:created"];
+    events.forEach((e) => backCanvas.on(e, onUpdate));
+
+    return () => {
+      captureSnapshot(backCanvas, "back");
+      events.forEach((e) => backCanvas.off(e, onUpdate));
+    };
+  }, [backCanvas, captureSnapshot]);
 
   const manualTriggerSync = useCallback(
-    async (view = "front") => {
-      const canvasMap = {
-        front: { canvas: frontCanvas, setter: setDesignTextureFront },
-        back: { canvas: backCanvas, setter: setDesignTextureBack },
-      };
-
-      const { canvas, setter } = canvasMap[view];
-
-      if (!canvas) {
-        console.warn(
-          `manualTriggerSync failed: No canvas available for ${view}`
-        );
-        return;
-      }
-
-      try {
-        const texture = await canvasSyncManager.getCanvasTexture(canvas);
-
-        if (!texture) {
-          console.warn(`No texture received for ${view}`);
-          return;
-        }
-
-        setter(texture);
-      } catch (error) {
-        console.error(`Manual ${view} canvas texture update failed:`, error);
-      }
+    (view = "front") => {
+      const canvas = view === "front" ? frontCanvas : backCanvas;
+      const setter = view === "front" ? setDesignTextureFront : setDesignTextureBack;
+      if (!canvas) return;
+      const snap = captureSnapshot(canvas, view);
+      if (snap) setter(snap);
     },
-    [frontCanvas, backCanvas] // Ensure it updates when canvases are available
+    [frontCanvas, backCanvas, captureSnapshot]
   );
 
   return {

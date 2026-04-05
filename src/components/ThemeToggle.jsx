@@ -76,6 +76,17 @@ const ThemeToggle = () => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key === "theme" && (event.newValue === "light" || event.newValue === "dark")) {
+        setTheme(event.newValue);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const isDark = theme === "dark";
 
   return (

@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 
-import { FONT_OPTIONS } from "../constants/designConstants";
+import { FONT_OPTIONS } from "@/constants/designConstants";
 import { useCanvas } from "@/hooks/useCanvas";
 
 const TextToolBar = ({ manualSync }) => {
@@ -32,7 +33,6 @@ const TextToolBar = ({ manualSync }) => {
     }
   }, [selectedObject]);
 
-  // Only show for text objects
   if (!selectedObject || selectedObject.type !== "textbox") {
     return null;
   }
@@ -66,7 +66,7 @@ const TextToolBar = ({ manualSync }) => {
   const handleFontSizeChange = (e) => {
     if (!selectedObject || !activeCanvas) return;
     const newSize = parseInt(e.target.value, 10);
-    if (isNaN(newSize) || newSize < 1) return; // Prevent invalid input
+    if (isNaN(newSize) || newSize < 1) return;
     setFontSize(newSize);
     selectedObject.set("fontSize", newSize);
     activeCanvas.renderAll();
@@ -91,9 +91,9 @@ const TextToolBar = ({ manualSync }) => {
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {FONT_OPTIONS.map((font) => (
-              <SelectItem key={font.value} value={font.value}>
-                {font.label}
+            {FONT_OPTIONS.map((fontOption) => (
+              <SelectItem key={fontOption.value} value={fontOption.value}>
+                {fontOption.label}
               </SelectItem>
             ))}
           </SelectGroup>
@@ -120,6 +120,10 @@ const TextToolBar = ({ manualSync }) => {
       </div>
     </div>
   );
+};
+
+TextToolBar.propTypes = {
+  manualSync: PropTypes.func.isRequired,
 };
 
 export default TextToolBar;

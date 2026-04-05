@@ -23,58 +23,55 @@ export const canvasSyncManager = {
     }
   },
 
-  getCanvasTextureFromStorage: (view) => {
-    return new Promise((resolve, reject) => {
-      try {
-        const storageKey =
-          view === "front"
-            ? STORAGE_KEYS.FRONT_CANVAS
-            : STORAGE_KEYS.BACK_CANVAS;
+  getCanvasTextureFromStorage: async (view) => {
+    try {
+      const storageKey =
+        view === "front"
+          ? STORAGE_KEYS.FRONT_CANVAS
+          : STORAGE_KEYS.BACK_CANVAS;
 
-        const storedObjects = localStorage.getItem(storageKey);
-        if (!storedObjects) {
-          resolve(null);
-          return;
-        }
-
-        // Parse the stored JSON objects
-        const parsedObjects = JSON.parse(storedObjects);
-
-        // Create a temporary canvas
-        const tempCanvas = new fabric.Canvas(null, {
-          width: 450, // Set appropriate width
-          height: 500, // Set appropriate height
-        });
-
-        // Use fabric.util.enlivenObjects to recreate canvas objects
-        fabric.util.enlivenObjects(
-          parsedObjects,
-          (objects) => {
-            // Add recreated objects to the canvas
-            objects.forEach((obj) => {
-              tempCanvas.add(obj);
-            });
-
-            // Generate texture
-            const dataURL = tempCanvas.toDataURL({
-              format: "png",
-              quality: 1,
-              multiplier: 1,
-              enableRetinaScaling: true,
-            });
-
-            resolve(dataURL);
-          },
-          (error) => {
-            console.error("Error enlivening objects:", error);
-            resolve(null);
-          },
-        );
-      } catch (error) {
-        console.error("Error retrieving canvas texture from storage:", error);
-        reject(error);
+      const storedObjects = localStorage.getItem(storageKey);
+      if (!storedObjects) {
+        return null;
       }
-    });
+
+      const parsedObjects = JSON.parse(storedObjects);
+      if (!parsedObjects || parsedObjects.length === 0) {
+        return null;
+      }
+
+      // Create a temporary canvas
+      const tempCanvas = new fabric.Canvas(null, {
+        width: 450,
+        height: 500,
+      });
+
+      // Fabric v6+ returns a Promise from enlivenObjects
+      try {
+        const objects = await fabric.util.enlivenObjects(parsedObjects);
+        objects.forEach((obj) => {
+          tempCanvas.add(obj);
+        });
+      } catch (enlivenError) {
+        console.error("Error enlivening objects:", enlivenError);
+        return null;
+      }
+
+      const dataURL = tempCanvas.toDataURL({
+        format: "png",
+        quality: 1,
+        multiplier: 1,
+        enableRetinaScaling: true,
+      });
+
+      // Cleanup temp canvas
+      tempCanvas.dispose();
+
+      return dataURL;
+    } catch (error) {
+      console.error("Error retrieving canvas texture from storage:", error);
+      return null;
+    }
   },
 
   // utility function

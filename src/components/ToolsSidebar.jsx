@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -56,7 +57,6 @@ export function ToolsSidebar({ manualSync }) {
         </ScrollArea>
       </SheetContent>
 
-      {/* Desktop version - always visible */}
       <div className="hidden lg:block">
         <div className="w-full min-w-[220px] max-w-[260px] panel-surface">
           <div className="p-5 space-y-4">
@@ -65,9 +65,7 @@ export function ToolsSidebar({ manualSync }) {
                 <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground font-semibold">
                   Tools
                 </p>
-                <h2 className="font-semibold text-lg leading-tight">
-                  Design Console
-                </h2>
+                <h2 className="font-semibold text-lg leading-tight">Design Console</h2>
                 <p className="text-xs text-muted-foreground">
                   Add art, text, colors, and refine details.
                 </p>
@@ -90,3 +88,7 @@ export function ToolsSidebar({ manualSync }) {
     </Sheet>
   );
 }
+
+ToolsSidebar.propTypes = {
+  manualSync: PropTypes.func.isRequired,
+};

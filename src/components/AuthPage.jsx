@@ -510,6 +510,7 @@
 
 "use client";
 
+import PropTypes from "prop-types";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -547,25 +548,43 @@ export default function AuthPage({ initialMode = "login", onBack, onContinue }) 
   };
 
   const handleLogin = async () => {
+    setError("");
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       onContinue?.();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Unable to sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignup = async () => {
+    setError("");
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       onContinue?.();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Unable to sign up. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
@@ -764,3 +783,9 @@ export default function AuthPage({ initialMode = "login", onBack, onContinue }) 
     </div>
   );
 }
+
+AuthPage.propTypes = {
+  initialMode: PropTypes.oneOf(["login", "signup"]),
+  onBack: PropTypes.func,
+  onContinue: PropTypes.func,
+};
